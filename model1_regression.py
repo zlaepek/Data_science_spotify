@@ -84,7 +84,7 @@ for key, mydataset in combination_dataset.items():
     datasetName = key
     feature = mydataset.drop('popularity',axis=1)
     target = mydataset['popularity']
-    exit(0)
+    
 
 
     # 3.2 Split train and test
