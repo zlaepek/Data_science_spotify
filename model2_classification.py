@@ -71,6 +71,7 @@ dataset['release_date'] = dataset['release_date'].str[0:3]
 dataset = dataset[dataset.release_date != '190']
 
 
+
 feature = dataset.drop('release_date',axis=1)
 target = dataset['release_date']
 
@@ -123,7 +124,7 @@ for key, mydataset in combination_dataset.items():
     # 3.5 Set and RUN GridSearchCV
     print("Start GridSearchCV")
     start_time = time.time()
-    model_test = GridSearchCV(model, param_grid, scoring="roc_auc", cv = 3, verbose=2)
+    model_test = GridSearchCV(model, param_grid, cv = 3, verbose=2)
     model_test.fit(train_X, train_Y)
     print("The time that this function finish :", time.time() - start_time)
 
