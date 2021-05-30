@@ -6,6 +6,8 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import BaggingClassifier
 from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
+from sklearn.metrics import make_scorer, roc_auc_score
 
 
 import pickle, joblib
@@ -111,58 +113,41 @@ for key, mydataset in combination_dataset.items():
 
     # 3.3 Set model
     print("Set model")
-    xgb_clf = XGBClassifier(booster='gbtree', 
-                    colsample_bylevel=0.9, 
-                    colsample_bytree=0.8, 
-                    gamma=0, 
-                    max_depth=8, 
-                    min_child_weight=3, 
-                    n_estimators=100, 
-                    nthread=4, 
-                    objective='binary:logistic', 
-                    random_state=2, 
-                    silent= True)
-
-    xgb_clf.fit(train_X,train_Y, eval_set=[(val_X,val_Y)], early_stopping_rounds=50)
-
-    print(xgb_clf.score(test_X, test_Y))
-
-    #파일 이름 구성 -> combination type + classification인지 regresison인지 + dirty data/originaldata + 몇번쨰 시도인지 + 그외 저장해야 하는 정보
-    with open('/content/gdrive/MyDrive/Colab Notebooks/'+ key + '_xgb' + '_model2_classification_dirtydata_4.pkl', 'wb') as f:
-        pickle.dump(xgb_clf, f)
-
-    # exit(0)
+    model = XGBClassifier()
 
 
 
-    # # 3.4 Set hyper-parameter for GridSearchCV
-    # print("Set parameters")
-    # param_grid = {"n_estimators": range(50, 100, 25), 
-    #               "base_estimator__max_depth": [1, 2, 4], 
-    #               'base_estimator__criterion' : ["gini", "entropy"],
-    #               'max_samples' : [1, 10, 50],
-    #               'max_features': [3, 6, 9]}
-
-    # # ref: https://3months.tistory.com/516 [Deep Play]
-
-
-    # # 3.5 Set and RUN GridSearchCV
-    # print("Start GridSearchCV")
-    # start_time = time.time()
-    # model_test = GridSearchCV(model, param_grid, cv = 3, verbose=2)
-    # model_test.fit(train_X, train_Y)
-    # print("The time that this function finish :", time.time() - start_time)
+    # for XGBRegressor
+    param_grid={'booster' :['gbtree'],
+                 'max_depth':[5,6,8],
+                 'min_child_weight':[1,3,5],
+                 'gamma':[0,1,2,3],
+                 'nthread':[4],
+                 'colsample_bytree':[0.5,0.8],
+                 'colsample_bylevel':[0.9],
+                 'n_estimators':[50],
+                 'random_state':[2],
+                 'eval_metric':['error']}
 
 
-    # # 3.6 Show Result & Evaluation
-    # print('model 2 best estimator: ', model_test.best_estimator_)
-    # print('model 2 best parameters: ', model_test.best_params_)
+    # 3.5 Define an evaluation metric as root mean squared error in the scoring parameter
+    # 3.6 Set and RUN GridSearchCV
+    start_time = time.time()
+    model_test = GridSearchCV(model, param_grid, cv=5, n_jobs=4, verbose=2)
+    model_test.fit(train_X, train_Y)
+    print("The time that this function finish :", time.time() - start_time)
+
+
+    # 3.6 Show Result & Evaluation
+    print('model 2 best estimator: ', model_test.best_estimator_)
+    print('model 2 best parameters: ', model_test.best_params_)
 
         
     # best_model = model_test.best_estimator_
     # predict_test = best_model.predict(test_X)
     # print('Best model 2 score : ', best_model.score(test_X, test_Y))
 
-    # #파일 이름 구성 -> combination type + classification인지 regresison인지 + dirty data/originaldata + 몇번쨰 시도인지 + 그외 저장해야 하는 정보
-    # with open('/content/gdrive/MyDrive/Colab Notebooks/' + key + '_model2_classification_dirtydata_2.pkl', 'wb') as f:
-    #     pickle.dump(best_model, f)
+
+    #파일 이름 구성 -> combination type + classification인지 regresison인지 + dirty data/originaldata + 몇번쨰 시도인지 + 그외 저장해야 하는 정보
+    with open('/content/gdrive/MyDrive/Colab Notebooks/'+ key + '_xgb' + '_model2_classification_dirtydata.pkl', 'wb') as f:
+        pickle.dump(xgb_clf, f)
