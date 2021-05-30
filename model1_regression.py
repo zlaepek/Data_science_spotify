@@ -1,14 +1,12 @@
-import pandas as pd
-import random
-from ETE_scaling import scale_encode_combination
-from pprint import pprint as pp
-from sklearn import preprocessing
-from sklearn.model_selection import train_test_split, GridSearchCV
-import pickle
-from sklearn.externals import joblib
 import time
-from sklearn.ensemble import GradientBoostingRegressor
-
+import pickle
+import joblib
+import pandas as pd
+import ETE_scaling
+from pprint import pprint as pp
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import Lasso, Ridge, ElasticNet
+from xgboost import XGBRegressor
 
 # DATA PREPROCESSING STEP 1=====================================================
 # 1-1. Load data
@@ -56,11 +54,19 @@ print("drop Liveness")
 dataset = dataset[dataset.duration_ms > 60000] # 1min
 print("drop Duration_ms")
 
-# 1.5 Modity release date (YYYY -> YYY (first 3 chat))
+# 1.5 Modify release date (YYYY -> YYY (first 3 chat))
 # ref : https://stackoverflow.com/questions/36505847/substring-of-an-entire-column-in-pandas-dataframe/36506041
+# for 2010~2021 models
 dataset['release_date'] = dataset['release_date'].str[0:3]
+years_filtering = dataset['release_date'] >= '201'
 
+# for 2015~2021 models
+# dataset['release_date'] = dataset['release_date'].str[0:4]
+# years_filtering = dataset['release_date'] >= '2015'
 
+dataset = dataset[years_filtering]
+
+print(dataset.head())
 print(dataset.shape)
 print(dataset['release_date'].isna().sum())
 
@@ -72,7 +78,7 @@ categorical_feature_list = ['release_date', 'time_signature', 'key']
 
 
 # 2.2 Run scaling & encoding using "scale_encode_combination" function (return type : dictionary)
-combination_dataset = scale_encode_combination(dataset, numerical_feature_list, categorical_feature_list)
+combination_dataset = ETE_scaling.scale_encode_combination(dataset, numerical_feature_list, categorical_feature_list)
 pp(combination_dataset)
 
 
@@ -82,56 +88,52 @@ for key, mydataset in combination_dataset.items():
     print(mydataset.describe())
 
     datasetName = key
-    feature = mydataset.drop('popularity',axis=1)
+    feature = mydataset.drop('popularity', axis=1)
     target = mydataset['popularity']
-    
-
 
     # 3.2 Split train and test
     train_X, test_X, train_Y, test_Y = train_test_split(feature, target, shuffle=True)
-    
 
     # 3.3 Set model
-    model = GradientBoostingRegressor()
-
+    model = XGBRegressor()
 
     # 3.4 Set hyper-parameter for GridSearchCV
-    param_grid= {'max_depth' : [1, 2, 3, 4, 5],
-             'criterion' : ['mse', 'friedman_mse'],
-             'max_features': ["auto", "sqrt", "log2"],
-             'loss' : ["ls", "lad", "huber", "quantile"],
-             'n_estimators': [100, 300, 500, 700, 1000],
-             'learning_rate' : [0.01, 0.05, 0.1, 0.5]}
+    # for Lasso, Ridge
+    # param_grid = {'alpha': [0.0001, 0.01, 1, 2, 3, 4]}
 
-    
-    # 3.5 Set Evaluation function
+    # for ElasticNet
+    # param_grid = {'l1_ratio': [0.01, 0.1, 1.0],
+    #               'alpha': [0.0001, 0.01, 1, 2, 3, 4]}
+
+    # for XGBRegressor
+    param_grid = {"learning_rate": [0.05, 0.10],
+                        "max_depth": [3, 4],
+                        "min_child_weight": [1, 3],
+                        "colsample_bytree": [0.3, 0.4]}
 
 
+    # 3.5 Define an evaluation metric as root mean squared error in the scoring parameter
     # 3.6 Set and RUN GridSearchCV
     start_time = time.time()
-    model_test = GridSearchCV(model, param_grid, scoring=mse, cv = 3, verbose = 1)
+    model_test = GridSearchCV(model, param_grid, scoring='neg_root_mean_squared_error', cv=3, verbose=1)
     model_test.fit(train_X, train_Y)
     print("The time that this function finish :", time.time() - start_time)
 
 
     # 3.7 Show Result & Evaluation
-    print('model 1 best estimator: ', model_test.best_estimator_)
-    print('model 1 best parameters: ', model_test.best_params_)
+    print(key + ' model 1 best estimator: ', model_test.best_estimator_)
+    print(key + 'model 1 best parameters: ', model_test.best_params_)
 
         
-    best_model = model_test.best_estimator_
-    predict_test = best_model.predict(test_X)
-    print('Best model 1 score : ', best_model.score(test_X, test_Y))
+    # best_model = model_test.best_estimator_
+    print(key + 'model 1\'s best RMSE(Root Mean Squared Error) : ', -model_test.score(test_X, test_Y))
 
 
-    #파일 이름 구성 -> combination type + classification인지 regresison인지 + dirty data/originaldata + 몇번쨰 시도인지 + 그외 저장해야 하는 정보
+    # 파일 이름 구성 -> combination type + classification인지 regresison인지 + dirty data/originaldata + 몇번쨰 시도인지 + 그외 저장해야 하는 정보
     with open(key + '_model1_regression_dirtydata_1.pkl', 'wb') as f:
-        pickle.dump(best_model, f)
+        pickle.dump(model_test, f)
 
 
     # 저장된 파일 사용하기
     # clf2 = joblib.load('dump.pkl')
     # preds2 = clf2.predict(X_test)
-
-
-
