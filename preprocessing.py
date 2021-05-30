@@ -1,69 +1,73 @@
 import pandas as pd
 import random
 
-from sklearn import preprocessing
-
-# Read data
+# DATA PREPROCESSING STEP 1=====================================================
+# 1.1. Load data
 original_data = pd.read_csv('tracks.csv')
 
-# 2% -> dirty data
-print(len(original_data.columns))
-print(len(original_data))
-
-### https://blockdmask.tistory.com/383 ###
-### random ###
-for i in range(0, int((len(original_data) - 1) / 100 * 2)):
-    # random seed 고정
-    col = random.randint(0, len(original_data.columns) - 1)
-    row = random.randint(0, len(original_data) - 1)
-    original_data.iat[row, col] = None
-
-
-original_data.to_csv('newtracks.csv', sep=',', na_rep='NaN')
-
-print("2% of dirty data")
+# 1.2. Checking data
+print("original dataset information")
 print(original_data.info())
+print(original_data.describe())
+print(original_data.shape)
 
 
-# fill
-original_data = original_data.fillna(original_data.median())
+# 1.3. Generate dirty data randomly
+# ref: https://blockdmask.tistory.com/383
+dirty_data = original_data
+for i in range(0, int((len(dirty_data) - 1) / 100 * 2)):
+    # random seed 고정
+    col = random.randint(0, len(dirty_data.columns) - 1)
+    row = random.randint(0, len(dirty_data) - 1)
+    dirty_data.iat[row, col] = None
 
-# drop -> unique data
+# 1.3.1. Checking specification of generated dirty data
+dirty_data.to_csv('dirty_tracks.csv', sep=',', na_rep='NaN')
+print("2% of dirty data")
+print(dirty_data.info())
+
+
+# 1.3.2. Fill missing data
+dirty_data = dirty_data.fillna(dirty_data.median())
+
+# 1.4.1. Drop not use column (unique data)
 print("drop unique data")
-original_data = original_data.drop(columns=['id', 'name', 'artists', 'id_artists'])
+dirty_data = dirty_data.drop(columns=['id', 'name', 'artists', 'id_artists'])
 
-# drop duplicated data
-original_data.duplicated().sum()
-original_data = original_data[~original_data.duplicated()]
+# 1.4.2. Drop duplicated data
+dirty_data.duplicated().sum()
+dirty_data = dirty_data[~dirty_data.duplicated()]
 print("drop duplicate")
-print(original_data.shape)
+print(dirty_data.shape)
 
-# drop popularity is 0 data
-original_data = original_data[original_data.popularity > 0]
+# 1.4.3. Drop popularity zero data
+# => A song with zero popularity is an outlier that does not reflect proper information.
+dirty_data = dirty_data[dirty_data.popularity > 0]
 print("drop popularity == 0")
-print(original_data.shape)
+print(dirty_data.shape)
 
-# release date 변환
-### https://stackoverflow.com/questions/36505847/substring-of-an-entire-column-in-pandas-dataframe/36506041 ###
-### -> dataframe slice ###
-original_data['release_date'] = original_data['release_date'].str[0:3]
-
-pd.options.display.max_columns = None
-pd.options.display.max_rows = None
-print("slice year (interval 10 year)")
-print(original_data.shape)
-
-# drop -> Speechiness (only instrumental)
-original_data = original_data[original_data.speechiness > 0]
+# 1.4.4. Drop Speechiness song (only instrumental)
+dirty_data = dirty_data[dirty_data.speechiness > 0]
 print("drop only instrumental")
-print(original_data.shape)
+print(dirty_data.shape)
 
-# drop -> Liveness (콘서트곡을 자르는 근거 (원곡이 있는데 두개 올리는거))
-original_data = original_data[original_data.liveness < 0.9]
+# 1.4.5. Drop Liveness song
+# => If the concert is live, it is highly likely to be duplicated because existing music sources may exist.
+dirty_data = dirty_data[dirty_data.liveness < 0.9]
 print("drop Liveness")
-print(original_data.shape)
+print(dirty_data.shape)
 
-# drop -> Duration_ms  (시간 너무 짧은 자르기 (광고 음악이나 시간 너무 짧은 음원 자르기))
-original_data = original_data[original_data.duration_ms > 60000] # 1min
+# 1.4.6. Drop Duration_ms short data
+# => Less than a minute of data is outlier data, which is likely to be advertised music.
+dirty_data = dirty_data[dirty_data.duration_ms > 60000] # 1min
 print("drop Duration_ms")
-print(original_data.shape)
+print(dirty_data.shape)
+
+# 1.5 Modity release date (YYYY -> YYY (first 3 chat))
+# ref : https://stackoverflow.com/questions/36505847/substring-of-an-entire-column-in-pandas-dataframe/36506041
+dirty_data['release_date'] = dirty_data['release_date'].str[0:3]
+
+print(dirty_data.shape)
+print(dirty_data['release_date'].isna().sum())
+
+
