@@ -55,17 +55,17 @@ print("drop Duration_ms")
 
 # 1.5 Modify release date (YYYY first 4 chars))
 # ref : https://stackoverflow.com/questions/36505847/substring-of-an-entire-column-in-pandas-dataframe/36506041
-# for 2010~2021 models
 dataset['release_date'] = dataset['release_date'].str[0:4]
+
+# for 2010~2020 models
 years_filtering_1 = dataset['release_date'] >= '2010'
-years_filtering_2 = dataset['release_date'] != '2021'
-dataset = dataset[years_filtering_1 & years_filtering_2]
 
 # for 2015~2020 models
-# dataset['release_date'] = dataset['release_date'].str[0:4]
 # years_filtering_1 = dataset['release_date'] >= '2015'
-# dataset = dataset[years_filtering_1 & years_filtering_2]
 
+
+years_filtering_2 = dataset['release_date'] != '2021'
+dataset = dataset[years_filtering_1 & years_filtering_2]
 
 
 print(dataset.head())
@@ -97,23 +97,28 @@ for key, mydataset in combination_dataset.items():
     train_X, test_X, train_Y, test_Y = train_test_split(feature, target, shuffle=True)
 
     # 3.3 Set model
-    model = XGBRegressor()
+    model = LinearRegression()
 
     # 3.4 Set hyper-parameter for GridSearchCV
+    # for Linear Regression
+    param_grid = {'fit_intercept': [True, False],
+                  'normalize': [True, False],
+                  'copy_X': [True, False],
+                  'n_jobs': [None, 2, 10, 50, 100]}
     # for Lasso, Ridge
-    # param_grid = {'alpha': [0.0001, 0.001, 0.01, 0.1, 1, 2, 3]}
+    # param_grid = {'alpha': [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 2, 3, 4, 5, 6]}
 
     # for ElasticNet
-    # param_grid = {'l1_ratio': [0.001, 0.01, 0.1, 1.0],
+    # param_grid = {'l1_ratio': [0.0001, 0.001, 0.01, 0.1, 1.0],
     #               'alpha': [0.0001, 0.01, 1, 2, 3, 4]}
 
     # for XGBRegressor
-    param_grid = {'learning_rate': [0.3, 0.05, 0.07],
-                  'max_depth': [5, 6, 7, 9],
-                  'min_child_weight': [4],
-                  'subsample': [0.7],
-                  'colsample_bytree': [0.7],
-                  'n_estimators': [100, 300, 500]}
+    # param_grid = {'learning_rate': [0.3, 0.05, 0.07],
+    #               'max_depth': [5, 6, 7, 9],
+    #               'min_child_weight': [4],
+    #               'subsample': [0.7],
+    #               'colsample_bytree': [0.7],
+    #               'n_estimators': [100, 300, 500]}
 
 
     # 3.5 Define an evaluation metric as a r^2 (Coefficient of determination) in the scoring parameter
