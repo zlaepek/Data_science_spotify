@@ -1,11 +1,10 @@
 import time
 import pickle
-import joblib
 import pandas as pd
 import ETE_scaling
 from pprint import pprint as pp
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.linear_model import Lasso, Ridge, ElasticNet
+from sklearn.linear_model import LinearRegression, Lasso, Ridge, ElasticNet
 from xgboost import XGBRegressor
 
 # DATA PREPROCESSING STEP 1=====================================================
@@ -54,17 +53,20 @@ print("drop Liveness")
 dataset = dataset[dataset.duration_ms > 60000] # 1min
 print("drop Duration_ms")
 
-# 1.5 Modify release date (YYYY -> YYY (first 3 chat))
+# 1.5 Modify release date (YYYY first 4 chars))
 # ref : https://stackoverflow.com/questions/36505847/substring-of-an-entire-column-in-pandas-dataframe/36506041
 # for 2010~2021 models
-dataset['release_date'] = dataset['release_date'].str[0:3]
-years_filtering = dataset['release_date'] >= '201'
+dataset['release_date'] = dataset['release_date'].str[0:4]
+years_filtering_1 = dataset['release_date'] >= '2010'
+years_filtering_2 = dataset['release_date'] != '2021'
+dataset = dataset[years_filtering_1 & years_filtering_2]
 
-# for 2015~2021 models
+# for 2015~2020 models
 # dataset['release_date'] = dataset['release_date'].str[0:4]
-# years_filtering = dataset['release_date'] >= '2015'
+# years_filtering_1 = dataset['release_date'] >= '2015'
+# dataset = dataset[years_filtering_1 & years_filtering_2]
 
-dataset = dataset[years_filtering]
+
 
 print(dataset.head())
 print(dataset.shape)
@@ -99,41 +101,37 @@ for key, mydataset in combination_dataset.items():
 
     # 3.4 Set hyper-parameter for GridSearchCV
     # for Lasso, Ridge
-    # param_grid = {'alpha': [0.0001, 0.01, 1, 2, 3, 4]}
+    # param_grid = {'alpha': [0.0001, 0.001, 0.01, 0.1, 1, 2, 3]}
 
     # for ElasticNet
-    # param_grid = {'l1_ratio': [0.01, 0.1, 1.0],
+    # param_grid = {'l1_ratio': [0.001, 0.01, 0.1, 1.0],
     #               'alpha': [0.0001, 0.01, 1, 2, 3, 4]}
 
     # for XGBRegressor
-    param_grid = {"learning_rate": [0.05, 0.10],
-                        "max_depth": [3, 4],
-                        "min_child_weight": [1, 3],
-                        "colsample_bytree": [0.3, 0.4]}
+    param_grid = {'learning_rate': [0.3, 0.05, 0.07],
+                  'max_depth': [5, 6, 7, 9],
+                  'min_child_weight': [4],
+                  'subsample': [0.7],
+                  'colsample_bytree': [0.7],
+                  'n_estimators': [100, 300, 500]}
 
 
-    # 3.5 Define an evaluation metric as root mean squared error in the scoring parameter
+    # 3.5 Define an evaluation metric as a r^2 (Coefficient of determination) in the scoring parameter
     # 3.6 Set and RUN GridSearchCV
     start_time = time.time()
-    model_test = GridSearchCV(model, param_grid, scoring='neg_root_mean_squared_error', cv=3, verbose=1)
+    model_test = GridSearchCV(model, param_grid, scoring='r2', cv=3, verbose=1)
     model_test.fit(train_X, train_Y)
     print("The time that this function finish :", time.time() - start_time)
 
 
-    # 3.7 Show Result & Evaluation
-    print(key + ' model 1 best estimator: ', model_test.best_estimator_)
-    print(key + 'model 1 best parameters: ', model_test.best_params_)
+    # 3.7 Show the results of evaluation
+    best_model = model_test.best_estimator_
 
-        
-    # best_model = model_test.best_estimator_
-    print(key + 'model 1\'s best RMSE(Root Mean Squared Error) : ', -model_test.score(test_X, test_Y))
+    print(key + ' model 1\'s best estimator: ', best_model)
+    print(key + 'model 1\'s best parameters: ', model_test.best_params_)
+    print(key + 'model 1\'s best score  : ', best_model.score(test_X, test_Y))
 
 
     # 파일 이름 구성 -> combination type + classification인지 regresison인지 + dirty data/originaldata + 몇번쨰 시도인지 + 그외 저장해야 하는 정보
     with open(key + '_model1_regression_dirtydata_1.pkl', 'wb') as f:
         pickle.dump(model_test, f)
-
-
-    # 저장된 파일 사용하기
-    # clf2 = joblib.load('dump.pkl')
-    # preds2 = clf2.predict(X_test)
