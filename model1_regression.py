@@ -1,8 +1,10 @@
+import math
 import time
 import pickle
 import pandas as pd
 import ETE_scaling
 from pprint import pprint as pp
+from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LinearRegression, Lasso, Ridge, ElasticNet
 from xgboost import XGBRegressor
@@ -131,11 +133,12 @@ for key, mydataset in combination_dataset.items():
 
     # 3.7 Show the results of evaluation
     best_model = model_test.best_estimator_
+    y_pred = best_model.predict(test_X)
 
     print(key + ' model 1\'s best estimator: ', best_model)
     print(key + 'model 1\'s best parameters: ', model_test.best_params_)
-    print(key + 'model 1\'s best score  : ', best_model.score(test_X, test_Y))
-
+    print(key + 'model 1\'s best R^2 score: ', r2_score(test_Y, y_pred))
+    print(key + 'model 1\'s best RMSE score: ', math.sqrt(mean_squared_error(test_Y, y_pred)))
 
     # 파일 이름 구성 -> combination type + classification인지 regresison인지 + dirty data/originaldata + 몇번쨰 시도인지 + 그외 저장해야 하는 정보
     with open(key + '_model1_regression_dirtydata_1.pkl', 'wb') as f:
