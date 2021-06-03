@@ -166,8 +166,8 @@ for key, mydataset in combination_dataset.items():
     prams = [Bagging_param_grid, rf_param_grid, XGB_param_grid]
 
 
-    # 3-5. Run GridsearchCV for each dataset, each model.
-    print("3-5. Run GridsearchCV for each dataset, each model.")
+    # 2-5. Run GridsearchCV for each dataset, each model.
+    print("2-5. Run GridsearchCV for each dataset, each model.")
     for modelname, model, param_grid in zip(models_name, models, prams):
         model_record = {}
 
@@ -177,8 +177,8 @@ for key, mydataset in combination_dataset.items():
         model_test.fit(train_X, train_Y)
         print("The time that this function finish :", time.time() - start_time)
 
-        # 3-6. Show the results of evaluation
-        print("3-6. Show the results of evaluation")
+        # 2-6. Show the results of evaluation
+        print("2-6. Show the results of evaluation")
         best_model = model_test.best_estimator_
         print(key + ' model 2\'s best estimator: ', best_model)
         print(key + 'model 2\'s best parameters: ', model_test.best_params_)
