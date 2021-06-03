@@ -21,7 +21,7 @@ def scale_encode_combination(dataset, numerical_feature_list, categorical_featur
     scaler_MM = preprocessing.MinMaxScaler()
     scaler_robust = preprocessing.RobustScaler()
     scaler_maxabs = preprocessing.MaxAbsScaler()
-    scaler_normalize = preprocessing.normalize()
+    scaler_normalize = preprocessing.Normalizer()
     scalers = [scaler_stndard, scaler_MM, scaler_robust, scaler_maxabs, scaler_normalize]
     scalers_name = ["standard", "minmax", "robust", "maxabs", "normalize"]
 
