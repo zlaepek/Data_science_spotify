@@ -30,8 +30,8 @@ print("=> after fill missing data")
 print(dataset.isna().sum())
 
 
-# 1-4-1. Drop not use column(unique data) & duplicated data 
-print("1-4-1. Drop not use column(unique data) & duplicated data")
+# 1-4-1. Drop useless columns(unique data) & duplicated data
+print("1-4-1. Drop useless columns(unique data) & duplicated data")
 print("drop unique data")
 dataset = dataset.drop(columns=['id', 'name', 'artists', 'id_artists'])
 print("drop dummy data")
@@ -91,7 +91,7 @@ categorical_feature_list = ['time_signature', 'key']
 
 # Run scaling & encoding using "scale_encode_combination" function
 # (return type : dictionary)
-combination_dataset = scale_encode_combination.scale_encode_combination(dataset, numerical_feature_list, categorical_feature_list)
+combination_dataset = scale_encode_combination(dataset, numerical_feature_list, categorical_feature_list)
 print("=> combination dataset! (10 type)")
 pp(combination_dataset)
 
@@ -122,20 +122,20 @@ for key, mydataset in combination_dataset.items():
     # 2-4. Set hyper-parameter for GridSearchCV
     print("2-4. Set hyper-parameters for GridSearchCV")
 
-    # for Linear Regression
+    # Param_grid for Linear Regression
     Linear_param_grid = {'fit_intercept': [True, False],
                   'normalize': [True, False],
                   'copy_X': [True, False],
                   'n_jobs': [None, 2, 10, 50, 100]}
 
-    # for Lasso, Ridge
+    # Param_grid for Lasso, Ridge
     Lasso_Ridge_param_grid = {'alpha': [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 2, 3, 4, 5, 6]}
 
-    # for ElasticNet
+    # Param_grid for ElasticNet
     Elastic_param_grid = {'l1_ratio': [0.0001, 0.001, 0.01, 0.1, 1.0],
                        'alpha': [0.0001, 0.01, 1, 2, 3, 4]}
 
-    # for XGBRegressor
+    # Param_grid for XGBRegressor
     XGB_param_grid = {'learning_rate': [0.3, 0.05, 0.07],
                     'max_depth': [5, 6, 7, 9],
                     'min_child_weight': [4],
@@ -148,31 +148,34 @@ for key, mydataset in combination_dataset.items():
 
 
     # 2-5. Run GridsearchCV for each dataset, each model.
-    print("2-5. Run GridsearchCV for each dataset, each model.")
-    for modelname, model, param_grid in zip(models_name, models, prams):
+    print("2-5. Run GridsearchCV for each model with the same dataset")
+    for modelName, model, param_grid in zip(models_name, models, prams):
         model_record = {}
 
-        print("=> Train " + modelname + " using " + key)
+        print("=> Training " + modelName + " using " + key + "...")
         start_time = time.time()
         model_test = GridSearchCV(model, param_grid, scoring='r2', cv=3, verbose=1)
         model_test.fit(train_X, train_Y)
-        print("The time that this function finish :", time.time() - start_time)
+        print("Time taken :", time.time() - start_time)
+
+        best_estimator = model_test.best_estimator_
+        best_parameters = model_test.best_params_
+        best_score = model_test.score(test_X, test_Y)
 
         # 2-6. Show the results of evaluation
         print("2-6. Show the results of evaluation")
-        best_model = model_test.best_estimator_
-        print(key + ' model 1\'s best estimator: ', best_model)
-        print(key + 'model 1\'s best parameters: ', model_test.best_params_)
-        print(key + 'model 1\'s best score  : ', best_model.score(test_X, test_Y))
+        print(key + ' model 1\'s best estimator: ', best_estimator)
+        print(key + ' model 1\'s best parameters: ', best_parameters)
+        print(key + ' model 1\'s best score  : ', best_score)
 
-        model_record['estimator'] = best_model
-        model_record['parameters'] = model_test.best_params_
-        model_record['score'] = best_model.score(test_X, test_Y)
+        model_record['estimator'] = best_estimator
+        model_record['parameters'] = best_parameters
+        model_record['score'] = best_score
 
-        total_result[key + "_" + modelname] = model_record
+        total_result[key + "_" + modelName] = model_record
 
-        # Save best model weight
-        save_name = "Regression_" + key + "_" + modelname 
+        # Save the best model
+        save_name = "Regression_" + key + "_" + modelName 
         with open(save_name + '.pkl', 'wb') as f:
             pickle.dump(model_test, f)
 
